@@ -1,6 +1,9 @@
 import logging
 import numpy as np
 import pandas as pd
+import os, zipfile, cv2
+from tempfile import TemporaryDirectory
+from PIL import Image
 import requests
 from sklearn.datasets import fetch_kddcup99
 from typing import Tuple, Union
@@ -9,6 +12,82 @@ from alibi_detect.utils.data import Bunch
 pd.options.mode.chained_assignment = None  # default='warn'
 
 logger = logging.getLogger(__name__)
+
+
+def fetch_traffic_signs(data_folder: str = "../data/traffic/") -> Bunch:
+    """
+    German traffic signs benchmark data set.
+    Parameters
+    ----------
+    data_folder
+        Folder with raw data
+
+    Returns
+        train and test set
+    -------
+
+    """
+    # tmp_dir = data_folder + 'tmp/'
+    logger.info('Unzipping file ...')
+    with TemporaryDirectory() as tmp_dir:
+        with zipfile.ZipFile(os.path.join(data_folder, 'gtsrb-german-traffic-sign.zip'), "r") as zip_ref:
+            zip_ref.extractall(tmp_dir)
+        train_folder = tmp_dir + '/train/'
+
+        data = []
+        labels = []
+
+        height = 32
+        width = 32
+        channels = 3
+        classes = 43
+        n_inputs = height * width * channels
+        logger.info('Extracting images')
+        for i in range(classes):
+            path = train_folder + "{0}/".format(i)
+            print(path)
+            Class = os.listdir(path)
+            for a in Class:
+                try:
+                    image = cv2.imread(path + a)
+                    image_from_array = Image.fromarray(image, 'RGB')
+                    size_image = image_from_array.resize((height, width))
+                    data.append(np.array(size_image))
+                    labels.append(i)
+                except AttributeError:
+                    print(" ")
+
+        y_test = pd.read_csv(os.path.join(tmp_dir, "Test.csv"))
+        labels_test = y_test['Path'].as_matrix()
+        y_test = y_test['ClassId'].values
+
+        data_test = []
+
+        for f in labels_test:
+            pathi = tmp_dir + '/test/' + f.replace('Test/', '')
+            image = cv2.imread(pathi)
+            image_from_array = Image.fromarray(image, 'RGB')
+            size_image = image_from_array.resize((height, width))
+            data_test.append(np.array(size_image))
+
+        X_test = np.array(data_test)
+
+    Cells = np.array(data)
+    labels = np.array(labels)
+
+    # Randomize the order of the input images
+    s = np.arange(Cells.shape[0])
+    np.random.seed(43)
+    np.random.shuffle(s)
+    Cells = Cells[s]
+    labels = labels[s]
+
+    (X_train, X_val) = Cells[(int)(0.2 * len(labels)):], Cells[:(int)(0.2 * len(labels))]
+    (y_train, y_val) = labels[(int)(0.2 * len(labels)):], labels[:(int)(0.2 * len(labels))]
+
+    train, val, test = (X_train, y_train), (X_val, y_val), (X_test, y_test)
+
+    return Bunch(train=train, val=val, test=test)
 
 
 def fetch_kdd(target: list = ['dos', 'r2l', 'u2r', 'probe'],
