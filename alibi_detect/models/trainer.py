@@ -75,7 +75,7 @@ def trainer(model: tf.keras.Model,
                 X_train_batch, y_train_batch = train_batch
 
             with tf.GradientTape() as tape:
-                preds = model(X_train_batch)
+                preds = model.vae(X_train_batch)
 
                 if y_train is None:
                     ground_truth = X_train_batch
@@ -93,11 +93,11 @@ def trainer(model: tf.keras.Model,
                 else:
                     loss = loss_fn(*args)
 
-                if model.losses:  # additional model losses
-                    loss += sum(model.losses)
+                if model.vae.losses:  # additional model losses
+                    loss += sum(model.vae.losses)
 
-            grads = tape.gradient(loss, model.trainable_weights)
-            optimizer.apply_gradients(zip(grads, model.trainable_weights))
+            grads = tape.gradient(loss, model.vae.trainable_weights)
+            optimizer.apply_gradients(zip(grads, model.vae.trainable_weights))
 
             if verbose:
                 loss_val = loss.numpy()
@@ -111,7 +111,6 @@ def trainer(model: tf.keras.Model,
                 pbar.add(1, values=pbar_values)
 
             if validation_data != (None, None):
-                model.infer_threshold(X_train[:2000], threshold_perc=90.)
                 if isinstance(validation_data, tuple):
                     preds_val = model.predict(validation_data[0])
                     ground_truth_val = validation_data[1]
