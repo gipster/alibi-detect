@@ -120,8 +120,8 @@ def trainer(model: tf.keras.Model,
                     ground_truth_val = validation_data
 
                 if log_metric_val is not None:
-                    log_metric_val[1](ground_truth_val, preds_val)
-                    pbar_values.append((log_metric_val[0], log_metric_val[1].result().numpy()))
+                    v = log_metric_val[1](ground_truth_val, preds_val)
+                    pbar_values.append((log_metric_val[0], v))
             pbar.add(1, values=pbar_values)
             print('800A')
 
