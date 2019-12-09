@@ -1,12 +1,13 @@
 import numpy as np
 import tensorflow as tf
-from typing import Tuple
-
+from typing import Tuple, Callable
+from sklearn.metrics import accuracy_score
 
 def trainer(model: tf.keras.Model,
             loss_fn: tf.keras.losses,
             X_train: np.ndarray,
             y_train: np.ndarray = None,
+            validation_data: tuple = (None, None),
             optimizer: tf.keras.optimizers = tf.keras.optimizers.Adam(learning_rate=1e-3),
             loss_fn_kwargs: dict = None,
             epochs: int = 20,
@@ -14,6 +15,7 @@ def trainer(model: tf.keras.Model,
             buffer_size: int = 1024,
             verbose: bool = True,
             log_metric:  Tuple[str, "tf.keras.metrics"] = None,
+            log_metric_val: Tuple[str, Callable] = None,
             callbacks: tf.keras.callbacks = None) -> None:  # TODO: incorporate callbacks + LR schedulers
     """
     Train TensorFlow model.
@@ -45,7 +47,7 @@ def trainer(model: tf.keras.Model,
     callbacks
         Callbacks used during training.
     """
-    # create dataset
+    # create datase
     if y_train is None:  # unsupervised model
         train_data = X_train
     else:
@@ -53,6 +55,11 @@ def trainer(model: tf.keras.Model,
     train_data = tf.data.Dataset.from_tensor_slices(train_data)
     train_data = train_data.shuffle(buffer_size=buffer_size).batch(batch_size)
     n_minibatch = int(np.ceil(X_train.shape[0] / batch_size))
+
+    if validation_data[0] is not None:
+        if validation_data[1] is None:
+            validation_data = validation_data[0]
+        validation_data = tf.data.Dataset.from_tensor_slices(validation_data)
 
     # iterate over epochs
     for epoch in range(epochs):
@@ -102,3 +109,26 @@ def trainer(model: tf.keras.Model,
                     log_metric[1](ground_truth, preds)
                     pbar_values.append((log_metric[0], log_metric[1].result().numpy()))
                 pbar.add(1, values=pbar_values)
+
+            if validation_data != (None, None):
+                model.infer_threshold(X_train[:2000], threshold_perc=90.)
+                if isinstance(validation_data, tuple):
+                    preds_val = model.predict(validation_data[0])
+                    ground_truth_val = validation_data[1]
+                else:
+                    preds_val = model.predict(validation_data)
+                    ground_truth_val = validation_data
+
+                if log_metric_val is not None:
+                    log_metric_val[1](ground_truth_val, preds_val)
+                    pbar_values.append((log_metric_val[0], log_metric_val[1].result().numpy()))
+            pbar.add(1, values=pbar_values)
+
+
+def advesarial_accuracy(ground_truth_val, preds_val):
+    score_val = preds_val['data']['instance_score']
+    preds_val = preds_val['data']['is_adversarial']
+
+    acc = accuracy_score(ground_truth_val, preds_val)
+
+    return acc
