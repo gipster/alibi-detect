@@ -8,6 +8,7 @@ from alibi_detect.models.autoencoder import VAE
 from alibi_detect.models.trainer import trainer
 from alibi_detect.models.losses import loss_adv_vae
 from alibi_detect.base import BaseDetector, FitMixin, ThresholdMixin, adversarial_prediction_dict
+from typing import Tuple, Callable
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +86,7 @@ class AdversarialVAE(BaseDetector, FitMixin, ThresholdMixin):
             batch_size: int = 64,
             verbose: bool = True,
             log_metric: Tuple[str, "tf.keras.metrics"] = None,
+            log_metric_val: Tuple[str, Callable] = None,
             callbacks: tf.keras.callbacks = None,
             ) -> None:
         """
@@ -127,6 +129,7 @@ class AdversarialVAE(BaseDetector, FitMixin, ThresholdMixin):
                   'batch_size': batch_size,
                   'verbose': verbose,
                   'log_metric': log_metric,
+                  'log_metric_val': log_metric_val,
                   'callbacks': callbacks,
                   'loss_fn_kwargs': {'w_model': w_model,
                                      'w_recon': w_recon,
