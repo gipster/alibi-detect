@@ -2,6 +2,7 @@ import numpy as np
 import tensorflow as tf
 from typing import Tuple, Callable
 from sklearn.metrics import accuracy_score
+from tensorflow.keras.losses import kld
 
 def trainer(model: tf.keras.Model,
             loss_fn: tf.keras.losses,
@@ -75,7 +76,7 @@ def trainer(model: tf.keras.Model,
                 X_train_batch, y_train_batch = train_batch
 
             with tf.GradientTape() as tape:
-                preds = model.vae(X_train_batch)
+                preds = model(X_train_batch)
 
                 if y_train is None:
                     ground_truth = X_train_batch
@@ -93,11 +94,11 @@ def trainer(model: tf.keras.Model,
                 else:
                     loss = loss_fn(*args)
 
-                if model.vae.losses:  # additional model losses
-                    loss += sum(model.vae.losses)
+                if model.losses:  # additional model losses
+                    loss += sum(model.losses)
 
-            grads = tape.gradient(loss, model.vae.trainable_weights)
-            optimizer.apply_gradients(zip(grads, model.vae.trainable_weights))
+            grads = tape.gradient(loss, model.trainable_weights)
+            optimizer.apply_gradients(zip(grads, model.trainable_weights))
 
             if verbose:
                 loss_val = loss.numpy()
@@ -112,12 +113,27 @@ def trainer(model: tf.keras.Model,
 
             if validation_data != (None, None):
                 if isinstance(validation_data, tuple):
-                    preds_val = model.predict(validation_data[0])
-                    ground_truth_val = validation_data[1]
+                    X_val, ground_truth_val = validation_data
                 else:
-                    preds_val = model.predict(validation_data)
-                    ground_truth_val = validation_data
+                    X_val = ground_truth_val = validation_data[0]
+                preds_val = model(X_val)
 
+                # compute val loss
+                if tf.is_tensor(preds_val):
+                    args = [ground_truth_val, preds_val]
+                else:
+                    args = [ground_truth_val] + list(preds_val)
+
+                if loss_fn_kwargs:
+                    loss_valid = loss_fn(*args, **loss_fn_kwargs)
+                else:
+                    loss_valid = loss_fn(*args)
+
+                loss_valid_val = loss_valid.numpy()
+                if loss_valid_val.shape != (len(X_val),) and loss_valid_val.shape:
+                    add_mean_valid = np.ones((len(X_val) - loss_valid_val.shape[0],)) * loss_valid_val.mean()
+                    loss_valid_val = np.r_[loss_valid_val, add_mean_valid]
+                pbar_values = [('loss_valid', loss_valid_val)]
                 if log_metric_val is not None:
                     v = log_metric_val[1](ground_truth_val, preds_val)
                     pbar_values.append((log_metric_val[0], v))
@@ -125,10 +141,20 @@ def trainer(model: tf.keras.Model,
             print('800A')
 
 
-def advesarial_accuracy(ground_truth_val, preds_val):
-    score_val = preds_val['data']['instance_score']
-    preds_val = preds_val['data']['is_adversarial']
+def infer_threshold(adv_score,
+    threshold_perc: float = 95.
+    ) -> None:
+    """
+    Update threshold by a value inferred from the percentage of instances considered to be
+    adversarial in a sample of the dataset.
 
-    acc = accuracy_score(ground_truth_val, preds_val)
-
-    return acc
+    Parameters
+    ----------
+    X
+    Batch of instances.
+    threshold_perc
+    Percentage of X considered to be normal based on the adversarial score.
+    """
+    # update threshold
+    threshold = np.percentile(adv_score, threshold_perc)
+    return threshold
