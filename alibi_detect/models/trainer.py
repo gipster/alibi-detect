@@ -123,6 +123,7 @@ def trainer(model: tf.keras.Model,
                     log_metric_val[1](ground_truth_val, preds_val)
                     pbar_values.append((log_metric_val[0], log_metric_val[1].result().numpy()))
             pbar.add(1, values=pbar_values)
+            print('800A')
 
 
 def advesarial_accuracy(ground_truth_val, preds_val):
