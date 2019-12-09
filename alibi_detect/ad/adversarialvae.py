@@ -117,6 +117,7 @@ class AdversarialVAE(BaseDetector, FitMixin, ThresholdMixin):
         callbacks
             Callbacks used during training.
         """
+        print('800A')
         # train arguments
         args = [self.vae, loss_fn, X]
         kwargs = {'optimizer': optimizer,
