@@ -195,10 +195,11 @@ def trainer(model: tf.keras.Model,
         df_loss['train'] = train_loss
         df_loss['test'] = test_loss
 
-        df_scores.to_csv(os.path.join(run_dir, 'scores.csv'))
-        df_loss.to_csv(os.path.join(run_dir, 'losses.csv'))
         df_adv_test_scores = df_adv_test_scores.T
         df_adv_test_scores['labels'] = y_val_batch
+
+        df_scores.to_csv(os.path.join(run_dir, 'scores.csv'), index=False)
+        df_loss.to_csv(os.path.join(run_dir, 'losses.csv'), index=False)
         df_adv_test_scores.to_csv(os.path.join(run_dir, 'adv_scores.csv'), index=False)
 
 def infer_threshold(adv_score,
