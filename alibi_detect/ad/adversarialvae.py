@@ -88,6 +88,7 @@ class AdversarialVAE(BaseDetector, FitMixin, ThresholdMixin):
             log_metric: Tuple[str, "tf.keras.metrics"] = None,
             log_metric_val: Tuple[str, Callable] = None,
             callbacks: tf.keras.callbacks = None,
+            log_dir: str = None,
             ) -> None:
         """
         Train Adversarial VAE model.
@@ -120,9 +121,9 @@ class AdversarialVAE(BaseDetector, FitMixin, ThresholdMixin):
         callbacks
             Callbacks used during training.
         """
-        print('800A')
+        X_val, y_val = validation_data
         # train arguments
-        args = [self.vae, loss_fn, X]
+        args = [self.vae, self.model, loss_fn, X]
         kwargs = {'validation_data': validation_data,
                   'optimizer': optimizer,
                   'epochs': epochs,
@@ -133,7 +134,8 @@ class AdversarialVAE(BaseDetector, FitMixin, ThresholdMixin):
                   'callbacks': callbacks,
                   'loss_fn_kwargs': {'w_model': w_model,
                                      'w_recon': w_recon,
-                                     'model': self.model}
+                                     'model': self.model},
+                  'log_dir': log_dir,
                   }
 
         # initialize covariance matrix if default adversarial vae loss is used with elbo enabled
