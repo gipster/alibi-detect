@@ -1,14 +1,17 @@
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 from typing import Tuple, Callable
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, confusion_matrix
 from tensorflow.keras.losses import kld
+import os
 
 def trainer(model: tf.keras.Model,
+            ancilla_model: tf.keras.Model,
             loss_fn: tf.keras.losses,
             X_train: np.ndarray,
             y_train: np.ndarray = None,
-            validation_data: tuple = (None, None),
+            validation_data: tuple = None,
             optimizer: tf.keras.optimizers = tf.keras.optimizers.Adam(learning_rate=1e-3),
             loss_fn_kwargs: dict = None,
             epochs: int = 20,
@@ -17,6 +20,7 @@ def trainer(model: tf.keras.Model,
             verbose: bool = True,
             log_metric:  Tuple[str, "tf.keras.metrics"] = None,
             log_metric_val: Tuple[str, Callable] = None,
+            log_dir: str = None,
             callbacks: tf.keras.callbacks = None) -> None:  # TODO: incorporate callbacks + LR schedulers
     """
     Train TensorFlow model.
@@ -48,6 +52,17 @@ def trainer(model: tf.keras.Model,
     callbacks
         Callbacks used during training.
     """
+    if log_dir is not None:
+        runs = next(os.walk(log_dir))[1]
+        run_id = 0
+        while str(run_id) in runs:
+            run_id += 1
+            if run_id > 100:
+                break
+        run_dir = log_dir + str(run_id)
+        print('Creating log dir:', run_dir)
+        if not os.path.exists(run_dir):
+            os.makedirs(run_dir)
     # create datase
     if y_train is None:  # unsupervised model
         train_data = X_train
@@ -57,11 +72,17 @@ def trainer(model: tf.keras.Model,
     train_data = train_data.shuffle(buffer_size=buffer_size).batch(batch_size)
     n_minibatch = int(np.ceil(X_train.shape[0] / batch_size))
 
-    if validation_data[0] is not None:
-        if validation_data[1] is None:
-            validation_data = validation_data[0]
+    if validation_data is not None:
+        X_val, y_val = validation_data
+        if y_val is None:
+            validation_data = X_val
+        else:
+            validation_data = (X_val, y_val)
         validation_data = tf.data.Dataset.from_tensor_slices(validation_data)
-
+        validation_data = validation_data.shuffle(buffer_size=buffer_size).batch(len(X_val))
+    train_loss, test_loss = [], []
+    test_scores, test_accs, test_f1s, test_recs, test_precs, test_cms = [], [], [], [], [], []
+    adv_scores = []
     # iterate over epochs
     for epoch in range(epochs):
         if verbose:
@@ -77,7 +98,6 @@ def trainer(model: tf.keras.Model,
 
             with tf.GradientTape() as tape:
                 preds = model(X_train_batch)
-
                 if y_train is None:
                     ground_truth = X_train_batch
                 else:
@@ -110,36 +130,76 @@ def trainer(model: tf.keras.Model,
                     log_metric[1](ground_truth, preds)
                     pbar_values.append((log_metric[0], log_metric[1].result().numpy()))
                 pbar.add(1, values=pbar_values)
+        train_loss.append(loss_val)
 
-            if validation_data != (None, None):
-                if isinstance(validation_data, tuple):
-                    X_val, ground_truth_val = validation_data
+        if validation_data is not None:
+            for step_val, val_batch in enumerate(validation_data):
+
+                if y_val is None:
+                    X_val_batch = val_batch
                 else:
-                    X_val = ground_truth_val = validation_data[0]
-                preds_val = model(X_val)
+                    X_val_batch, y_val_batch = val_batch
 
-                # compute val loss
-                if tf.is_tensor(preds_val):
-                    args = [ground_truth_val, preds_val]
-                else:
-                    args = [ground_truth_val] + list(preds_val)
+                with tf.GradientTape() as tape:
+                    preds_val = model(X_val_batch)
+                    if y_val is None:
+                        ground_truth_val = X_val_batch
+                    else:
+                        ground_truth_val = y_val_batch
 
-                if loss_fn_kwargs:
-                    loss_valid = loss_fn(*args, **loss_fn_kwargs)
-                else:
-                    loss_valid = loss_fn(*args)
+                    # compute val loss
+                    if tf.is_tensor(preds_val):
+                        args = [X_val_batch, preds_val]
+                    else:
+                        args = [X_val_batch] + list(preds_val)
 
+                    if loss_fn_kwargs:
+                        loss_valid = loss_fn(*args, **loss_fn_kwargs)
+                    else:
+                        loss_valid = loss_fn(*args)
+            if verbose:
                 loss_valid_val = loss_valid.numpy()
                 if loss_valid_val.shape != (len(X_val),) and loss_valid_val.shape:
                     add_mean_valid = np.ones((len(X_val) - loss_valid_val.shape[0],)) * loss_valid_val.mean()
                     loss_valid_val = np.r_[loss_valid_val, add_mean_valid]
                 pbar_values = [('loss_valid', loss_valid_val)]
                 if log_metric_val is not None:
-                    v = log_metric_val[1](ground_truth_val, preds_val)
-                    pbar_values.append((log_metric_val[0], v))
-            pbar.add(1, values=pbar_values)
-            print('800A')
+                    train_scores = score(X_train_batch.numpy(), model, ancilla_model)
+                    threshold = infer_threshold(train_scores)
+                    adv_score = score(X_val_batch.numpy(), model, ancilla_model)
+                    y_preds_val = (adv_score > threshold).astype(int)
 
+                    acc = accuracy_score(y_val_batch.numpy(), y_preds_val)
+                    f1 = f1_score(y_val_batch.numpy(), y_preds_val)
+                    prec = precision_score(y_val_batch.numpy(), y_preds_val)
+                    rec = recall_score(y_val_batch.numpy(), y_preds_val)
+                    cm = confusion_matrix(y_val_batch.numpy(), y_preds_val)
+
+                    test_accs.append(acc)
+                    test_f1s.append(f1)
+                    test_precs.append(prec)
+                    test_recs.append(rec)
+                    test_cms.append(cm)
+                    adv_scores.append(adv_score)
+                    pbar_values.append(('acc', acc))
+                pbar.add(1, values=pbar_values)
+                test_loss.append(loss_valid_val)
+
+    if log_dir is not None:
+        df_scores, df_loss, df_adv_test_scores = pd.DataFrame(), pd.DataFrame(), pd.DataFrame(data=adv_scores)
+        df_scores['acc'] = test_accs
+        df_scores['f1'] = test_f1s
+        df_scores['rec'] = test_recs
+        df_scores['prec'] = test_precs
+
+        df_loss['train'] = train_loss
+        df_loss['test'] = test_loss
+
+        df_scores.to_csv(os.path.join(run_dir, 'scores.csv'))
+        df_loss.to_csv(os.path.join(run_dir, 'losses.csv'))
+        df_adv_test_scores = df_adv_test_scores.T
+        df_adv_test_scores['labels'] = y_val_batch
+        df_adv_test_scores.to_csv(os.path.join(run_dir, 'adv_scores.csv'), index=False)
 
 def infer_threshold(adv_score,
     threshold_perc: float = 95.
@@ -158,3 +218,30 @@ def infer_threshold(adv_score,
     # update threshold
     threshold = np.percentile(adv_score, threshold_perc)
     return threshold
+
+
+def score(X: np.ndarray, vae, model) -> np.ndarray:
+    """
+    Compute adversarial scores.
+
+    Parameters
+    ----------
+    X
+    Batch of instances to analyze.
+
+    Returns
+    -------
+    Array with adversarial scores for each instance in the batch.
+    """
+    # sample reconstructed instances
+    X_samples = np.repeat(X, 5, axis=0)
+    X_recon = vae(X_samples)
+
+    # model predictions
+    y = model(X_samples)
+    y_recon = model(X_recon)
+
+    # KL-divergence between predictions
+    kld_y = kld(y, y_recon).numpy().reshape(-1, 5)
+    adv_score = np.mean(kld_y, axis=1)
+    return adv_score
