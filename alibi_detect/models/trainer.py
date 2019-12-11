@@ -181,7 +181,7 @@ def trainer(model: tf.keras.Model,
                     test_recs.append(rec)
                     test_cms.append(cm)
                     adv_scores.append(adv_score)
-                    pbar_values.append(('acc', acc))
+                    pbar_values.append(('detection_acc', acc))
                 pbar.add(1, values=pbar_values)
                 test_loss.append(loss_valid_val)
 
