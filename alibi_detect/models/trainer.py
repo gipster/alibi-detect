@@ -206,6 +206,7 @@ def trainer(model: tf.keras.Model,
                     test_cms.append(cm)
                     adv_scores.append(adv_score)
                     pbar_values.append(('detection_acc', acc))
+                    pbar_values.append(('detection_f1', f1))
                 pbar.add(1, values=pbar_values)
                 test_loss.append(loss_valid_val)
 
@@ -228,7 +229,7 @@ def trainer(model: tf.keras.Model,
 
 def infer_threshold(adv_score,
     threshold_perc: float = 95.
-    ) -> None:
+    ):
     """
     Update threshold by a value inferred from the percentage of instances considered to be
     adversarial in a sample of the dataset.
