@@ -6,6 +6,7 @@ from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_sc
 from tensorflow.keras.losses import kld
 import os
 
+
 def trainer(model: tf.keras.Model,
             ancilla_model: tf.keras.Model,
             loss_fn: tf.keras.losses,
@@ -246,7 +247,7 @@ def infer_threshold(adv_score,
     return threshold
 
 
-def score(X: np.ndarray, vae, model) -> np.ndarray:
+def score(X: np.ndarray, vae, model, nb_samples=2) -> np.ndarray:
     """
     Compute adversarial scores.
 
@@ -260,7 +261,7 @@ def score(X: np.ndarray, vae, model) -> np.ndarray:
     Array with adversarial scores for each instance in the batch.
     """
     # sample reconstructed instances
-    X_samples = np.repeat(X, 5, axis=0)
+    X_samples = np.repeat(X, nb_samples, axis=0)
     X_recon = vae(X_samples)
 
     # model predictions
@@ -268,6 +269,6 @@ def score(X: np.ndarray, vae, model) -> np.ndarray:
     y_recon = model(X_recon)
 
     # KL-divergence between predictions
-    kld_y = kld(y, y_recon).numpy().reshape(-1, 5)
+    kld_y = kld(y, y_recon).numpy().reshape(-1, nb_samples)
     adv_score = np.mean(kld_y, axis=1)
     return adv_score
