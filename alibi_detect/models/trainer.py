@@ -12,6 +12,7 @@ def trainer(model: tf.keras.Model,
             X_train: np.ndarray,
             y_train: np.ndarray = None,
             validation_data: tuple = None,
+            adversarial_data: tuple = None,
             optimizer: tf.keras.optimizers = tf.keras.optimizers.Adam(learning_rate=1e-3),
             loss_fn_kwargs: dict = None,
             epochs: int = 20,
@@ -52,17 +53,6 @@ def trainer(model: tf.keras.Model,
     callbacks
         Callbacks used during training.
     """
-    if log_dir is not None:
-        runs = next(os.walk(log_dir))[1]
-        run_id = 0
-        while str(run_id) in runs:
-            run_id += 1
-            if run_id > 100:
-                break
-        run_dir = log_dir + str(run_id)
-        print('Creating log dir:', run_dir)
-        if not os.path.exists(run_dir):
-            os.makedirs(run_dir)
     # create datase
     if y_train is None:  # unsupervised model
         train_data = X_train
@@ -80,6 +70,16 @@ def trainer(model: tf.keras.Model,
             validation_data = (X_val, y_val)
         validation_data = tf.data.Dataset.from_tensor_slices(validation_data)
         validation_data = validation_data.shuffle(buffer_size=buffer_size).batch(len(X_val))
+
+    if adversarial_data is not None:
+        X_adv, y_adv = adversarial_data
+        if y_adv is None:
+            adversarial_data = X_adv
+        else:
+            adversarial_data = (X_adv, y_adv)
+        adversarial_data = tf.data.Dataset.from_tensor_slices(adversarial_data)
+        adversarial_data = adversarial_data.shuffle(buffer_size=buffer_size).batch(len(X_adv))
+
     train_loss, test_loss = [], []
     test_scores, test_accs, test_f1s, test_recs, test_precs, test_cms = [], [], [], [], [], []
     adv_scores = []
@@ -132,31 +132,55 @@ def trainer(model: tf.keras.Model,
                 pbar.add(1, values=pbar_values)
         train_loss.append(loss_val)
 
-        if validation_data is not None:
-            for step_val, val_batch in enumerate(validation_data):
+        # Validation
+        if adversarial_data is not None and validation_data is not None:
+            # prepare advesarial test data
 
-                if y_val is None:
-                    X_val_batch = val_batch
+            step_adv, adv_batch = next(enumerate(adversarial_data))
+
+            if y_adv is None:
+                X_adv_batch = adv_batch
+            else:
+                X_adv_batch, y_adv_batch = adv_batch
+
+            with tf.GradientTape() as tape:
+                preds_adv = model(X_adv_batch)
+                if y_adv is None:
+                    ground_truth_adv = X_adv_batch
                 else:
-                    X_val_batch, y_val_batch = val_batch
+                    ground_truth_adv = y_adv_batch
 
-                with tf.GradientTape() as tape:
-                    preds_val = model(X_val_batch)
-                    if y_val is None:
-                        ground_truth_val = X_val_batch
-                    else:
-                        ground_truth_val = y_val_batch
+                # compute val loss
+                if tf.is_tensor(preds_adv):
+                    args = [X_adv_batch, preds_adv]
+                else:
+                    args = [X_adv_batch] + list(preds_adv)
 
-                    # compute val loss
-                    if tf.is_tensor(preds_val):
-                        args = [X_val_batch, preds_val]
-                    else:
-                        args = [X_val_batch] + list(preds_val)
+                if loss_fn_kwargs:
+                    loss_valid = loss_fn(*args, **loss_fn_kwargs)
+                else:
+                    loss_valid = loss_fn(*args)
 
-                    if loss_fn_kwargs:
-                        loss_valid = loss_fn(*args, **loss_fn_kwargs)
-                    else:
-                        loss_valid = loss_fn(*args)
+            # prepare validation data
+            step_val, val_batch = next(enumerate(validation_data))
+
+            X_val_batch = val_batch
+
+            with tf.GradientTape() as tape:
+                preds_val = model(X_val_batch)
+                ground_truth_val = X_val_batch
+
+                # compute val loss
+                if tf.is_tensor(preds_val):
+                    args = [X_val_batch, preds_val]
+                else:
+                    args = [X_val_batch] + list(preds_val)
+
+                if loss_fn_kwargs:
+                    loss_valid = loss_fn(*args, **loss_fn_kwargs)
+                else:
+                    loss_valid = loss_fn(*args)
+
             if verbose:
                 loss_valid_val = loss_valid.numpy()
                 if loss_valid_val.shape != (len(X_val),) and loss_valid_val.shape:
@@ -166,14 +190,14 @@ def trainer(model: tf.keras.Model,
                 if log_metric_val is not None:
                     train_scores = score(X_train_batch.numpy(), model, ancilla_model)
                     threshold = infer_threshold(train_scores)
-                    adv_score = score(X_val_batch.numpy(), model, ancilla_model)
-                    y_preds_val = (adv_score > threshold).astype(int)
+                    adv_score = score(X_adv_batch.numpy(), model, ancilla_model)
+                    y_preds_adv = (adv_score > threshold).astype(int)
 
-                    acc = accuracy_score(y_val_batch.numpy(), y_preds_val)
-                    f1 = f1_score(y_val_batch.numpy(), y_preds_val)
-                    prec = precision_score(y_val_batch.numpy(), y_preds_val)
-                    rec = recall_score(y_val_batch.numpy(), y_preds_val)
-                    cm = confusion_matrix(y_val_batch.numpy(), y_preds_val)
+                    acc = accuracy_score(y_adv_batch.numpy(), y_preds_adv)
+                    f1 = f1_score(y_adv_batch.numpy(), y_preds_adv)
+                    prec = precision_score(y_adv_batch.numpy(), y_preds_adv)
+                    rec = recall_score(y_adv_batch.numpy(), y_preds_adv)
+                    cm = confusion_matrix(y_adv_batch.numpy(), y_preds_adv)
 
                     test_accs.append(acc)
                     test_f1s.append(f1)
@@ -196,11 +220,11 @@ def trainer(model: tf.keras.Model,
         df_loss['test'] = test_loss
 
         df_adv_test_scores = df_adv_test_scores.T
-        df_adv_test_scores['labels'] = y_val_batch
+        df_adv_test_scores['labels'] = y_adv_batch
 
-        df_scores.to_csv(os.path.join(run_dir, 'scores.csv'), index=False)
-        df_loss.to_csv(os.path.join(run_dir, 'losses.csv'), index=False)
-        df_adv_test_scores.to_csv(os.path.join(run_dir, 'adv_scores.csv'), index=False)
+        df_scores.to_csv(os.path.join(log_dir, 'scores.csv'), index=False)
+        df_loss.to_csv(os.path.join(log_dir, 'losses.csv'), index=False)
+        df_adv_test_scores.to_csv(os.path.join(log_dir, 'adv_scores.csv'), index=False)
 
 def infer_threshold(adv_score,
     threshold_perc: float = 95.
