@@ -77,6 +77,7 @@ class AdversarialVAE(BaseDetector, FitMixin, ThresholdMixin):
     def fit(self,
             X: np.ndarray,
             validation_data = (None, None),
+            adversarial_data = (None, None),
             loss_fn: tf.keras.losses = loss_adv_vae,
             w_model: float = 1.,
             w_recon: float = 0.,
@@ -125,6 +126,7 @@ class AdversarialVAE(BaseDetector, FitMixin, ThresholdMixin):
         # train arguments
         args = [self.vae, self.model, loss_fn, X]
         kwargs = {'validation_data': validation_data,
+                  'adversarial_data': adversarial_data,
                   'optimizer': optimizer,
                   'epochs': epochs,
                   'batch_size': batch_size,
