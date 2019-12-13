@@ -228,8 +228,9 @@ def trainer(model: tf.keras.Model,
         df_loss.to_csv(os.path.join(log_dir, 'losses.csv'), index=False)
         df_adv_test_scores.to_csv(os.path.join(log_dir, 'adv_scores.csv'), index=False)
 
+
 def infer_threshold(adv_score,
-    threshold_perc: float = 95.
+    threshold_perc: float = 90.
     ):
     """
     Update threshold by a value inferred from the percentage of instances considered to be
