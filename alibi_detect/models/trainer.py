@@ -212,6 +212,7 @@ def trainer(model: tf.keras.Model,
                     pbar.add(1, values=pbar_values)
                 test_loss.append(loss_valid_val)
                 best_model_path = os.path.join(log_dir, 'best.ckpt')
+                epoch_model_path = os.path.join(log_dir, 'model_epoch_{}.ckpt'.format(epoch))
 
                 if len(test_accs) == 0:
                     max_acc = 0
@@ -222,6 +223,8 @@ def trainer(model: tf.keras.Model,
                                                                                                      acc,
                                                                                                      best_model_path)))
                     model.save_weights(best_model_path)
+                print('Saving last model')
+                model.save_weights(epoch_model_path)
 
     if log_dir is not None:
         df_scores, df_loss, df_adv_test_scores = pd.DataFrame(), pd.DataFrame(), pd.DataFrame(data=adv_scores)
