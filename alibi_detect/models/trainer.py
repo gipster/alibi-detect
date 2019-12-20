@@ -186,8 +186,8 @@ def trainer(model: tf.keras.Model,
             if loss_valid_val.shape != (len(X_val),) and loss_valid_val.shape:
                 add_mean_valid = np.ones((len(X_val) - loss_valid_val.shape[0],)) * loss_valid_val.mean()
                 loss_valid_val = np.r_[loss_valid_val, add_mean_valid]
-                if verbose:
-                    pbar_values = [('loss_valid', loss_valid_val)]
+                pbar_values = [('loss_valid', loss_valid_val)]
+
             if log_metric_val is not None:
                 train_scores = score(X_train_batch.numpy(), model, ancilla_model)
                 threshold = infer_threshold(train_scores)
