@@ -206,9 +206,7 @@ def trainer(model: tf.keras.Model,
                 else:
                     max_acc = max(test_accs)
                 if acc > max_acc:
-                    pbar_values.append(('Accuracy improved from {} to {}. Saving model in {}'.format(max_acc,
-                                                                                                     acc,
-                                                                                                     best_model_path)))
+                    print('Accuracy improved from {} to {}. Saving model in {}'.format(max_acc, acc, best_model_path))
                     model.save_weights(best_model_path)
 
                 test_accs.append(acc)
