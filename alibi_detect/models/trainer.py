@@ -5,7 +5,7 @@ from typing import Tuple, Callable
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, confusion_matrix
 from tensorflow.keras.losses import kld
 import os
-
+from tensorflow.keras.callbacks import ModelCheckpoint
 
 def trainer(model: tf.keras.Model,
             ancilla_model: tf.keras.Model,
@@ -182,34 +182,43 @@ def trainer(model: tf.keras.Model,
                 else:
                     loss_valid = loss_fn(*args)
 
-            if verbose:
-                loss_valid_val = loss_valid.numpy()
-                if loss_valid_val.shape != (len(X_val),) and loss_valid_val.shape:
-                    add_mean_valid = np.ones((len(X_val) - loss_valid_val.shape[0],)) * loss_valid_val.mean()
-                    loss_valid_val = np.r_[loss_valid_val, add_mean_valid]
-                pbar_values = [('loss_valid', loss_valid_val)]
-                if log_metric_val is not None:
-                    train_scores = score(X_train_batch.numpy(), model, ancilla_model)
-                    threshold = infer_threshold(train_scores)
-                    adv_score = score(X_adv_batch.numpy(), model, ancilla_model)
-                    y_preds_adv = (adv_score > threshold).astype(int)
+            loss_valid_val = loss_valid.numpy()
+            if loss_valid_val.shape != (len(X_val),) and loss_valid_val.shape:
+                add_mean_valid = np.ones((len(X_val) - loss_valid_val.shape[0],)) * loss_valid_val.mean()
+                loss_valid_val = np.r_[loss_valid_val, add_mean_valid]
+                if verbose:
+                    pbar_values = [('loss_valid', loss_valid_val)]
+            if log_metric_val is not None:
+                train_scores = score(X_train_batch.numpy(), model, ancilla_model)
+                threshold = infer_threshold(train_scores)
+                adv_score = score(X_adv_batch.numpy(), model, ancilla_model)
+                y_preds_adv = (adv_score > threshold).astype(int)
 
-                    acc = accuracy_score(y_adv_batch.numpy(), y_preds_adv)
-                    f1 = f1_score(y_adv_batch.numpy(), y_preds_adv)
-                    prec = precision_score(y_adv_batch.numpy(), y_preds_adv)
-                    rec = recall_score(y_adv_batch.numpy(), y_preds_adv)
-                    cm = confusion_matrix(y_adv_batch.numpy(), y_preds_adv)
+                acc = accuracy_score(y_adv_batch.numpy(), y_preds_adv)
+                f1 = f1_score(y_adv_batch.numpy(), y_preds_adv)
+                prec = precision_score(y_adv_batch.numpy(), y_preds_adv)
+                rec = recall_score(y_adv_batch.numpy(), y_preds_adv)
+                cm = confusion_matrix(y_adv_batch.numpy(), y_preds_adv)
 
-                    test_accs.append(acc)
-                    test_f1s.append(f1)
-                    test_precs.append(prec)
-                    test_recs.append(rec)
-                    test_cms.append(cm)
-                    adv_scores.append(adv_score)
+                test_accs.append(acc)
+                test_f1s.append(f1)
+                test_precs.append(prec)
+                test_recs.append(rec)
+                test_cms.append(cm)
+                adv_scores.append(adv_score)
+                if verbose:
                     pbar_values.append(('detection_acc', acc))
                     pbar_values.append(('detection_f1', f1))
-                pbar.add(1, values=pbar_values)
+                    pbar.add(1, values=pbar_values)
                 test_loss.append(loss_valid_val)
+                best_model_path = os.path.join(log_dir, 'best.ckpt')
+
+                if len(test_accs) == 0:
+                    max_acc = 0
+                else:
+                    max_acc = max(test_accs)
+                if acc > max_acc:
+                    model.save_weights(best_model_path)
 
     if log_dir is not None:
         df_scores, df_loss, df_adv_test_scores = pd.DataFrame(), pd.DataFrame(), pd.DataFrame(data=adv_scores)
