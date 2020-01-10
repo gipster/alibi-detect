@@ -205,7 +205,8 @@ def trainer(model: tf.keras.Model,
                     max_acc = 0
                 else:
                     max_acc = max(test_accs)
-                if acc > max_acc:
+                #if acc > max_acc:
+                if True:
                     print('Accuracy improved from {} to {}. Saving model in {}'.format(np.round(max_acc, 4),
                                                                                        np.round(acc, 4),
                                                                                        best_model_path))
@@ -289,3 +290,8 @@ def score(X: np.ndarray, vae, model, nb_samples=2) -> np.ndarray:
     kld_y = kld(y, y_recon).numpy().reshape(-1, nb_samples)
     adv_score = np.mean(kld_y, axis=1)
     return adv_score
+
+
+def transform(X, vae):
+    X_recon = vae(X)
+    return X_recon
