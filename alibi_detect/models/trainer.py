@@ -211,8 +211,9 @@ def trainer(model: tf.keras.Model,
                                                                                        best_model_path))
                     model.save_weights(best_model_path)
                 else:
-                    print('Accuracy did not improve. Saving model in {} anyway'.format(best_model_path))
-                    model.save_weights(best_model_path)
+                    print('Accuracy did not improve')
+                    #print('Accuracy did not improve. Saving model in {} anyway'.format(best_model_path))
+                    #model.save_weights(best_model_path)
 
                 test_accs.append(acc)
                 test_f1s.append(f1)
