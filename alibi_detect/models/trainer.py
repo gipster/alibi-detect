@@ -201,6 +201,7 @@ def trainer(model: tf.keras.Model,
                 cm = confusion_matrix(y_adv_batch.numpy(), y_preds_adv)
 
                 best_model_path = os.path.join(log_dir, 'best.ckpt')
+                last_model_path = os.path.join(log_dir, 'last.ckpt')
                 if len(test_accs) == 0:
                     max_acc = 0
                 else:
@@ -211,9 +212,8 @@ def trainer(model: tf.keras.Model,
                                                                                        best_model_path))
                     model.save_weights(best_model_path)
                 else:
-                    print('Accuracy did not improve')
-                    #print('Accuracy did not improve. Saving model in {} anyway'.format(best_model_path))
-                    #model.save_weights(best_model_path)
+                    print('Accuracy did not improve. Saving model in {} anyway'.format(last_model_path))
+                    model.save_weights(last_model_path)
 
                 test_accs.append(acc)
                 test_f1s.append(f1)
