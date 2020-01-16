@@ -4,6 +4,10 @@ import tensorflow
 import foolbox
 from sklearn.model_selection import ParameterGrid
 import joblib
+import os
+
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
+os.environ["CUDA_VISIBLE_DEVICES"] = str(1)
 
 datasets = ['fashion_mnist']
 
@@ -53,6 +57,7 @@ grid = [{'attack': ['carlini'],
          }]
 
 params_list = list(ParameterGrid(grid))
+
 
 def load_dataset(dataset):
 
