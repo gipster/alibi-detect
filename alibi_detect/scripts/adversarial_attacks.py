@@ -145,5 +145,9 @@ def main():
             save_path = '/home/gio/datasets/adversarial/{}/params_{}.joblib'.format(dataset, counter)
             print('Attack completed. Saving in', save_path)
             joblib.dump(dict_to_save, save_path)
-            print('Done!')
+            print('Attack saved!')
 
+
+if __name__=="__main__":
+    main()
+    print('Done!')
