@@ -137,7 +137,13 @@ def main():
     counter = 0
     for dataset in datasets:
         for kwargs in params_list:
+            print('Dataset', dataset)
+            print('Attack', kwargs)
+            print('Attacking ...')
             X_adv_train, X_adv_test = performe_attack(dataset, **kwargs)
             dict_to_save = {'params': kwargs, 'X_adv_train': X_adv_train, 'X_adv_test': X_adv_test}
-            joblib.dump(dict_to_save, '/home/gio/datasets/adversarial/{}/params_{}.joblib'.format(dataset, counter))
+            save_path = '/home/gio/datasets/adversarial/{}/params_{}.joblib'.format(dataset, counter)
+            print('Attack completed. Saving in', save_path)
+            joblib.dump(dict_to_save, save_path)
+            print('Done!')
 
