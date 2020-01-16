@@ -52,7 +52,7 @@ grid = [{'attack': ['carlini'],
          'return_early': [True]
          }]
 
-params_list = list({ParameterGrid(grid)})
+params_list = list(ParameterGrid(grid))
 
 def load_dataset(dataset):
 
