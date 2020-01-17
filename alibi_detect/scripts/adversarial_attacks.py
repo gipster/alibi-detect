@@ -9,7 +9,7 @@ import os
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
 os.environ["CUDA_VISIBLE_DEVICES"] = str(1)
 
-datasets = ['fashion_mnist']
+datasets = ['fashion_mnist', 'mnist']
 
 def clean_grid(pars_list):
     clean_list = []
@@ -147,10 +147,11 @@ def main():
             print('Attacking ...')
             X_adv_train, X_adv_test = performe_attack(dataset, **kwargs)
             dict_to_save = {'params': kwargs, 'X_adv_train': X_adv_train, 'X_adv_test': X_adv_test}
-            save_path = '/home/gio/datasets/adversarial/{}/params_{}.joblib'.format(dataset, counter)
+            save_path = '/home/gio/adversarial_vae/datasets/adversarial/{}/dataset_{}.joblib'.format(dataset, counter)
             print('Attack completed. Saving in', save_path)
             joblib.dump(dict_to_save, save_path)
             print('Attack saved!')
+            counter += 1
 
 
 if __name__=="__main__":
