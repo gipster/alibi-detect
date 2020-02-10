@@ -11,6 +11,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = str(1)
 
 datasets = ['fashion_mnist', 'mnist']
 
+
 def clean_grid(pars_list):
     clean_list = []
     for params in pars_list:
@@ -23,21 +24,22 @@ def clean_grid(pars_list):
             clean_list.append(params)
     return clean_list
 
+
 grid = [{'attack': ['carlini'],
-        'binary_search_steps': [10, 20],
-        'max_iterations': [1000],
-        'confidence': [0, 0.1, 0.2, 0.5, 0.8],
-        'learning_rate': [0.05, 5e-3],
-        'initial_const': [1e-2, 1e-3],
-        'abort_early': [True]
+         'binary_search_steps': [10, 20],
+         'max_iterations': [1000],
+         'confidence': [0, 0.1, 0.2, 0.5, 0.8],
+         'learning_rate': [0.05, 5e-3],
+         'initial_const': [1e-2, 1e-3],
+         'abort_early': [True]
          },
         {'attack': ['pfgsm'],
-        'binary_search': [True] ,
-        'random_start': [False],
-        'return_early': [True],
-        'iterations':[10, 20],
-        'epsilon':[0.1, 0.2, 0.3, 0.5, 1., 2.],
-        'stepsize': [0.1, 0.2, 0.5, 1.]
+         'binary_search': [True],
+         'random_start': [False],
+         'return_early': [True],
+         'iterations':[10, 20],
+         'epsilon':[0.1, 0.2, 0.3, 0.5, 1., 2.],
+         'stepsize': [0.1, 0.2, 0.5, 1.]
          },
         {'attack': ['fgsm'],
          'binary_search': [True],
