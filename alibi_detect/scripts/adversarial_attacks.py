@@ -23,21 +23,13 @@ def clean_grid(pars_list):
             clean_list.append(params)
     return clean_list
 
-grid = [{'attack': ['carlini'],
-        'binary_search_steps': [10, 20],
-        'max_iterations': [1000],
-        'confidence': [0, 0.1, 0.2, 0.5, 0.8],
-        'learning_rate': [0.05, 5e-3],
-        'initial_const': [1e-2, 1e-3],
-        'abort_early': [True]
-         },
-        {'attack': ['pfgsm'],
+grid = [{'attack': ['pfgsm'],
         'binary_search': [True] ,
         'random_start': [False],
         'return_early': [True],
         'iterations':[10, 20],
-        'epsilon':[0.1, 0.2, 0.3, 0.5, 1., 2.],
-        'stepsize': [0.1, 0.2, 0.5, 1.]
+        'epsilon':[0.1, 0.5, 1., 2.],
+        'stepsize': [0.1, 0.5, 1.]
          },
         {'attack': ['fgsm'],
          'binary_search': [True],
@@ -49,11 +41,19 @@ grid = [{'attack': ['carlini'],
          },
         {'attack': ['rpgsm'],
          'binary_search': [True],
-         'epsilon': [0.1, 0.2, 0.3, 0.5, 1., 2.],
-         'stepsize': [0.01, 0.02, 0.05, 0.1],
-         'iterations': [10, 20],
+         'epsilon': [0.1, 0.5, 1., 2.],
+         'stepsize': [0.01, 0.05, 0.1],
+         'iterations': [10],
          'random_start': [False],
          'return_early': [True]
+         },
+        {'attack': ['carlini'],
+        'binary_search_steps': [10],
+        'max_iterations': [1000],
+        'confidence': [0.5, 0.8],
+        'learning_rate': [5e-3],
+        'initial_const': [1e-2],
+        'abort_early': [True]
          }]
 
 params_list = list(ParameterGrid(grid))
@@ -139,7 +139,7 @@ def performe_attack(dataset, **kwargs):
 
 def main():
 
-    counter = 0
+    counter = 9
     for dataset in datasets:
         for kwargs in params_list:
             print('Dataset', dataset)
