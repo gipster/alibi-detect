@@ -15,7 +15,8 @@ def trainer(model: tf.keras.Model,
             buffer_size: int = 1024,
             verbose: bool = True,
             log_metric:  Tuple[str, "tf.keras.metrics"] = None,
-            callbacks: tf.keras.callbacks = None) -> None:  # TODO: incorporate callbacks + LR schedulers
+            callbacks: tf.keras.callbacks = None,
+            cf_model: tf.keras.Model = None) -> None:  # TODO: incorporate callbacks + LR schedulers
     """
     Train TensorFlow model.
 
@@ -74,12 +75,19 @@ def trainer(model: tf.keras.Model,
                 X_train_batch = preprocess_fn(X_train_batch)
 
             with tf.GradientTape() as tape:
-                preds = model(X_train_batch)
-
-                if y_train is None:
-                    ground_truth = X_train_batch
+                if cf_model is not None:
+                    out_shape = cf_model.output_shape[1]
+                    ground_truth = tf.nn.softmax(np.random.rand(len(X_train_batch),out_shape))
+                    ground_truth = ground_truth ** (1 / 0.1)
+                    ground_truth = ground_truth / tf.reshape(tf.reduce_sum(ground_truth, axis=-1), (-1, 1))
+                    preds = model(X_train_batch, ground_truth)
                 else:
-                    ground_truth = y_train_batch
+                    preds = model(X_train_batch)
+
+                    if y_train is None:
+                        ground_truth = X_train_batch
+                    else:
+                        ground_truth = y_train_batch
 
                 # compute loss
                 if isinstance(loss_fn, Callable):  # type: ignore

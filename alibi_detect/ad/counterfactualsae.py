@@ -130,7 +130,6 @@ class CounterfactualsAE(FitMixin):
 
     def fit(self,
             X: np.ndarray,
-            y: np.ndarray,
             loss_fn: tf.keras.losses = loss_cf,
             w_model: float = 1.,
             w_recon: float = 0.,
@@ -171,7 +170,7 @@ class CounterfactualsAE(FitMixin):
             Preprocessing function applied to each training batch.
         """
         # train arguments
-        args = [self.ae, loss_fn, X, y]
+        args = [self.ae, loss_fn, X]
         kwargs = {
             'optimizer': optimizer,
             'epochs': epochs,
