@@ -202,6 +202,9 @@ class CFAE(tf.keras.Model):
     def call(self, x: tf.Tensor, y_t: tf.Tensor) -> tf.Tensor:
         z = self.encoder(x)
         y = self.model(x)
+        print('z', z)
+        print('y', y)
+        print('y_t', y_t)
         z = tf.concat([z, y, y_t], axis=1)
         x_recon = self.decoder(z)
         return x_recon
