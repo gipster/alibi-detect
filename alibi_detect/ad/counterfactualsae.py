@@ -106,7 +106,7 @@ class CounterfactualsAE(FitMixin):
         if isinstance(ae, tf.keras.Model):
             self.ae = ae
         elif isinstance(encoder_net, tf.keras.Sequential) and isinstance(decoder_net, tf.keras.Sequential):
-            self.ae = CFAE(encoder_net, decoder_net)  # define AE model
+            self.ae = CFAE(encoder_net, decoder_net, self.model)  # define AE model
         else:
             raise TypeError('No valid format detected for `ae` (tf.keras.Model) '
                             'or `encoder_net` and `decoder_net` (tf.keras.Sequential).')
