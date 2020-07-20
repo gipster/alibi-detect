@@ -234,7 +234,7 @@ def loss_cf(y_true: tf.Tensor,
     Loss value.
     """
 
-    y_pred = model(x_pred, y_true)
+    y_pred = model(x_pred)
 
     # apply temperature scaling
     if temperature != 1.:
