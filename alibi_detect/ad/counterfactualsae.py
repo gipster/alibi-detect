@@ -182,10 +182,6 @@ class CounterfactualsAE(FitMixin):
             'cf_model': self.model,
             'loss_fn_kwargs': {
                 'model': self.model,
-                'model_hl': self.model_hl,
-                'w_model': w_model,
-                'w_recon': w_recon,
-                'w_model_hl': self.w_model_hl,
                 'temperature': self.temperature
             }
         }
