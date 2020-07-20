@@ -83,7 +83,7 @@ def trainer(model: tf.keras.Model,
                     ground_truth = ground_truth / tf.reshape(tf.reduce_sum(ground_truth, axis=-1), (-1, 1))
                     preds = model(X_train_batch, ground_truth)
                     if loss_type == 'cce':
-                        ground_truth = tf.argmax(ground_truth, axis=1)
+                        ground_truth = tf.keras.utils.to_categorical(tf.argmax(ground_truth, axis=1))
                 else:
                     preds = model(X_train_batch)
 
