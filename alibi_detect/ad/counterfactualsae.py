@@ -179,6 +179,7 @@ class CounterfactualsAE(FitMixin):
             'log_metric': log_metric,
             'callbacks': callbacks,
             'preprocess_fn': preprocess_fn,
+            'cf_model': self.model,
             'loss_fn_kwargs': {
                 'model': self.model,
                 'model_hl': self.model_hl,
