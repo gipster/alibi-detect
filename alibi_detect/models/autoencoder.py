@@ -175,6 +175,38 @@ class AE(tf.keras.Model):
         return x_recon
 
 
+class CFAE(tf.keras.Model):
+
+    def __init__(self,
+                 encoder_net: tf.keras.Sequential,
+                 decoder_net: tf.keras.Sequential,
+                 model: tf.keras.Model,
+                 name: str = 'ae') -> None:
+        """
+        Combine encoder and decoder in AE.
+
+        Parameters
+        ----------
+        encoder_net
+            Layers for the encoder wrapped in a tf.keras.Sequential class.
+        decoder_net
+            Layers for the decoder wrapped in a tf.keras.Sequential class.
+        name
+            Name of autoencoder model.
+        """
+        super(CFAE, self).__init__(name=name)
+        self.encoder = EncoderAE(encoder_net)
+        self.decoder = Decoder(decoder_net)
+        self.model = model
+
+    def call(self, x: tf.Tensor, y_t: tf.Tensor) -> tf.Tensor:
+        z = self.encoder(x)
+        y = self.model(x)
+        z = tf.concat([z, y, y_t], axis=1)
+        x_recon = self.decoder(z)
+        return x_recon
+
+
 class EncoderLSTM(Layer):
 
     def __init__(self,

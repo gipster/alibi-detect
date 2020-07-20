@@ -199,3 +199,51 @@ def loss_adv_ae(x_true: tf.Tensor,
         return loss
     else:
         return loss
+
+
+def loss_cf(y_true: tf.Tensor,
+            x_pred: tf.Tensor,
+            model: tf.keras.Model = None,
+            temperature: float = 1.
+            ) -> tf.Tensor:
+    """
+    Loss function used for AdversarialAE.
+
+    Parameters
+    ----------
+    x_true
+        Batch of instances.
+    x_pred
+        Batch of reconstructed instances by the autoencoder.
+    model
+        A trained tf.keras model with frozen layers (layers.trainable = False).
+    model_hl
+        List with tf.keras models used to extract feature maps and make predictions on hidden layers.
+    w_model
+        Weight on model prediction loss term.
+    w_recon
+        Weight on MSE reconstruction error loss term.
+    w_model_hl
+        Weights assigned to the loss of each model in model_hl.
+    temperature
+        Temperature used for model prediction scaling.
+        Temperature <1 sharpens the prediction probability distribution.
+
+    Returns
+    -------
+    Loss value.
+    """
+
+    y_pred = model(x_pred)
+
+    # apply temperature scaling
+    if temperature != 1.:
+        y_true = y_true ** (1 / temperature)
+        y_true = y_true / tf.reshape(tf.reduce_sum(y_true, axis=-1), (-1, 1))
+
+    # compute K-L divergence loss
+    loss_kld = kld(y_true, y_pred)
+    std_kld = tf.math.reduce_std(loss_kld)
+    loss = tf.reduce_mean(loss_kld)
+
+    return loss
