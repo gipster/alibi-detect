@@ -127,9 +127,6 @@ class CounterfactualsAE(FitMixin):
 
         self.temperature = temperature
 
-        # set metadata
-        self.meta['detector_type'] = 'offline'
-        self.meta['data_type'] = data_type
 
     def fit(self,
             X: np.ndarray,
