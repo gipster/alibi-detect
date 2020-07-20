@@ -81,13 +81,10 @@ def trainer(model: tf.keras.Model,
                     ground_truth = tf.nn.softmax(np.random.rand(len(X_train_batch), out_shape))
                     ground_truth = ground_truth ** (1 / 0.1)
                     ground_truth = ground_truth / tf.reshape(tf.reduce_sum(ground_truth, axis=-1), (-1, 1))
-                    print(ground_truth)
-                    print(tf.argmax(ground_truth, axis=1))
                     preds = model(X_train_batch, ground_truth)
                     if loss_type == 'cce':
                         ground_truth = tf.keras.utils.to_categorical(tf.argmax(ground_truth, axis=1),
                                                                      num_classes=out_shape)
-                        print(ground_truth)
                 else:
                     preds = model(X_train_batch)
 
