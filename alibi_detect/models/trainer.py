@@ -85,7 +85,7 @@ def trainer(model: tf.keras.Model,
                     print(tf.argmax(ground_truth, axis=1))
                     preds = model(X_train_batch, ground_truth)
                     if loss_type == 'cce':
-                        ground_truth = tf.keras.utils.to_categorical(tf.argmax(ground_truth, axis=1))
+                        ground_truth = tf.keras.utils.to_categorical(tf.argmax(ground_truth, axis=1), nb_classes=10)
                         print(ground_truth)
                 else:
                     preds = model(X_train_batch)
