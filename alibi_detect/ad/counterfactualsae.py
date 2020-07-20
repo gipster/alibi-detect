@@ -50,7 +50,7 @@ class DenseHidden(tf.keras.Model):
         return self.output_layer(x)
 
 
-class CounterfactualsAE(BaseDetector, FitMixin, ThresholdMixin):
+class CounterfactualsAE(BaseDetector, FitMixin):
 
     def __init__(self,
                  threshold: float = None,
