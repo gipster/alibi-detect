@@ -16,7 +16,8 @@ def trainer(model: tf.keras.Model,
             verbose: bool = True,
             log_metric:  Tuple[str, "tf.keras.metrics"] = None,
             callbacks: tf.keras.callbacks = None,
-            cf_model: tf.keras.Model = None) -> None:  # TODO: incorporate callbacks + LR schedulers
+            cf_model: tf.keras.Model = None,
+            loss_type: str = 'kld') -> None:  # TODO: incorporate callbacks + LR schedulers
     """
     Train TensorFlow model.
 
@@ -81,6 +82,8 @@ def trainer(model: tf.keras.Model,
                     ground_truth = ground_truth ** (1 / 0.1)
                     ground_truth = ground_truth / tf.reshape(tf.reduce_sum(ground_truth, axis=-1), (-1, 1))
                     preds = model(X_train_batch, ground_truth)
+                    if loss_type == 'cce':
+                        ground_truth = tf.argmax(ground_truth, axis=1)
                 else:
                     preds = model(X_train_batch)
 

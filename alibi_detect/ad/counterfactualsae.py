@@ -62,6 +62,7 @@ class CounterfactualsAE(FitMixin):
                  hidden_layer_kld: dict = None,
                  w_model_hl: list = None,
                  temperature: float = 1.,
+                 loss_type: str = 'cce', # 'cce' or 'kld'
                  data_type: str = None
                  ) -> None:
         """
@@ -126,7 +127,7 @@ class CounterfactualsAE(FitMixin):
             self.w_model_hl = list(np.ones(len(self.model_hl)))
 
         self.temperature = temperature
-
+        self.loss_type = loss_type
 
     def fit(self,
             X: np.ndarray,
@@ -180,9 +181,11 @@ class CounterfactualsAE(FitMixin):
             'callbacks': callbacks,
             'preprocess_fn': preprocess_fn,
             'cf_model': self.model,
+            'loss_type': self.loss_type,
             'loss_fn_kwargs': {
                 'model': self.model,
-                'temperature': self.temperature
+                'temperature': self.temperature,
+                'loss_type': self.loss_type
             }
         }
 

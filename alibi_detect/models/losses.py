@@ -1,6 +1,6 @@
 import tensorflow as tf
 from tensorflow.keras.layers import Flatten
-from tensorflow.keras.losses import kld
+from tensorflow.keras.losses import kld, categorical_crossentropy
 import tensorflow_probability as tfp
 from alibi_detect.models.gmm import gmm_params, gmm_energy
 
@@ -204,7 +204,8 @@ def loss_adv_ae(x_true: tf.Tensor,
 def loss_cf(y_true: tf.Tensor,
             x_pred: tf.Tensor,
             model: tf.keras.Model = None,
-            temperature: float = 1.
+            temperature: float = 1.,
+            loss_type: str = 'kld'
             ) -> tf.Tensor:
     """
     Loss function used for AdversarialAE.
@@ -236,14 +237,18 @@ def loss_cf(y_true: tf.Tensor,
 
     y_pred = model(x_pred)
 
-    # apply temperature scaling
-    if temperature != 1.:
-        y_true = y_true ** (1 / temperature)
-        y_true = y_true / tf.reshape(tf.reduce_sum(y_true, axis=-1), (-1, 1))
+    if loss_type == 'kld':
+        # apply temperature scaling
+        if temperature != 1.:
+            y_true = y_true ** (1 / temperature)
+            y_true = y_true / tf.reshape(tf.reduce_sum(y_true, axis=-1), (-1, 1))
 
-    # compute K-L divergence loss
-    loss_kld = kld(y_true, y_pred)
-    std_kld = tf.math.reduce_std(loss_kld)
-    loss = tf.reduce_mean(loss_kld)
+        # compute K-L divergence loss
+        loss_kld = kld(y_true, y_pred)
+        std_kld = tf.math.reduce_std(loss_kld)
+        loss = tf.reduce_mean(loss_kld)
+    elif loss_type == 'cce':
+        loss_cce = categorical_crossentropy(y_true, y_pred)
+        loss = tf.reduce_mean(loss_cce)
 
     return loss
