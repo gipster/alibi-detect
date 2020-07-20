@@ -204,9 +204,6 @@ class CFAE(tf.keras.Model):
         y = self.model(x)
         y = tf.cast(y, dtype=z.dtype)
         y_t = tf.cast(y_t, dtype=z.dtype)
-        print('z', z)
-        print('y', y)
-        print('y_t', y_t)
         z = tf.concat([z, y, y_t], axis=1)
         x_recon = self.decoder(z)
         return x_recon
