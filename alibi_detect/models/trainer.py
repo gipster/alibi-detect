@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 from typing import Callable, Tuple
-
+import wandb
 
 def trainer(model: tf.keras.Model,
             loss_fn: tf.keras.losses,
@@ -100,6 +100,10 @@ def trainer(model: tf.keras.Model,
 
             grads = tape.gradient(loss, model.trainable_weights)
             optimizer.apply_gradients(zip(grads, model.trainable_weights))
+
+            wandb_logs = {'loss': loss.numpy().mean()}
+
+            wandb.log(wandb_logs)
 
             if verbose:
                 loss_val = loss.numpy()
