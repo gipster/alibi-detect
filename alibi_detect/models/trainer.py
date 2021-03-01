@@ -3,6 +3,7 @@ import tensorflow as tf
 from typing import Callable, Tuple
 import wandb
 
+
 def trainer(model: tf.keras.Model,
             loss_fn: tf.keras.losses,
             X_train: np.ndarray,
@@ -15,6 +16,7 @@ def trainer(model: tf.keras.Model,
             buffer_size: int = 1024,
             verbose: bool = True,
             log_metric:  Tuple[str, "tf.keras.metrics"] = None,
+            validation_data: Tuple[np.ndarray, np.ndarray] = None,
             callbacks: tf.keras.callbacks = None) -> None:  # TODO: incorporate callbacks + LR schedulers
     """
     Train TensorFlow model.
@@ -101,10 +103,6 @@ def trainer(model: tf.keras.Model,
             grads = tape.gradient(loss, model.trainable_weights)
             optimizer.apply_gradients(zip(grads, model.trainable_weights))
 
-            wandb_logs = {'loss': loss.numpy().mean()}
-
-            wandb.log(wandb_logs)
-
             if verbose:
                 loss_val = loss.numpy()
                 if loss_val.shape:
@@ -120,3 +118,6 @@ def trainer(model: tf.keras.Model,
                     log_metric[1](ground_truth, preds)
                     pbar_values.append((log_metric[0], log_metric[1].result().numpy()))
                 pbar.add(1, values=pbar_values)
+
+        wandb_logs = {'loss': loss.numpy().mean()}
+        wandb.log(wandb_logs)
